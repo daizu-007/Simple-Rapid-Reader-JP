@@ -52,20 +52,24 @@ def main(page: ft.Page):
             # 次のトークンが存在する場合
             if i + 1 < len(tokens):
                 next_token = tokens[i + 1]
-                print(token.surface + " : " + token.part_of_speech)
+                #print(token.surface + " : " + token.part_of_speech)
                 # 記号であるかどうかをチェック
                 # 記号であるならば分節を終了する
                 # ただし、括弧のはじまりである場合は分節を終了しない
+                # ただし、次のトークンが括弧のはじまりである場合は分節を終了する
                 if (token.part_of_speech.startswith('記号') and (token.surface not in 括弧)) or next_token.surface in 括弧:
                     chunks.append(''.join(current_chunk))
                     current_chunk = []
-                else:
-                    # 助詞または助動詞であるかどうかをチェック
-                    if token.part_of_speech.startswith('助詞') or token.part_of_speech.startswith('助動詞'):
-                            if not next_token.part_of_speech.startswith('助詞') and not next_token.part_of_speech.startswith('助動詞') and not next_token.part_of_speech.startswith('記号') and not next_token.part_of_speech.startswith('記号,空白'):
-                                # 現在のトークンが助詞または助動詞で、次のトークンが助詞または助動詞でなく、次のトークンが空白出ない場合に実行される
-                                chunks.append(''.join(current_chunk))
-                                current_chunk = []
+                # 助詞または助動詞であるかどうかをチェック
+                elif token.part_of_speech.startswith('助詞') or token.part_of_speech.startswith('助動詞'):
+                    if not next_token.part_of_speech.startswith('助詞') and not next_token.part_of_speech.startswith('助動詞') and not next_token.part_of_speech.startswith('記号') and not next_token.part_of_speech.startswith('記号,空白'):
+                        # 現在のトークンが助詞または助動詞で、次のトークンが助詞または助動詞でなく、次のトークンが空白出ない場合に実行される
+                        chunks.append(''.join(current_chunk))
+                        current_chunk = []
+                """# 現在のトークンが名詞であり、次のトークンが括弧はじまり以外の記号でない場合
+                elif token.part_of_speech.startswith('名詞') and not next_token.surface in 括弧 and not next_token.part_of_speech.startswith('記号'):
+                    chunks.append(''.join(current_chunk))
+                    current_chunk = []"""
 
             else:
                 # 最後のトークンの場合
@@ -119,7 +123,9 @@ def main(page: ft.Page):
     speed_slider = ft.Slider(
         min=10,
         max=300,
+        divisions=290,
         value=speed,
+        label="{value}/分",
         on_change=lambda _: change_speed()
     )
 
@@ -137,4 +143,4 @@ def main(page: ft.Page):
         )
     )
 
-ft.app(target=main)
+ft.app(target=main)# 
