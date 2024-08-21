@@ -10,6 +10,11 @@ tokenizer = Tokenizer()
 # 文節ごとに分割するための設定
 filters = [CompoundNounFilter()]  # 名詞の複合語を一つの単語にまとめるフィルター
 analyzer = Analyzer(tokenizer=tokenizer, token_filters=filters)
+# 半角記号を正しく認識させるための設定
+# https://qiita.com/sentencebird/items/60ee3337ed96478eb217 より
+symbol_settings = list(tokenizer.sys_dic.unknowns["SYMBOL"][0])
+symbol_settings[3] = "記号,一般,*,*"
+tokenizer.sys_dic.unknowns["SYMBOL"][0] = symbol_settings
 
 def main(page: ft.Page):
     page.title = "Simple Rapid Reader JP"
@@ -20,6 +25,7 @@ def main(page: ft.Page):
     speed = 120
     reading = False
     text = "Simple Rapid Reader JPへようこそ。ここに読みたい文章を入力してください。"
+    括弧 = ['(', '[', '{', '「', '『', '【', '〔', '〈', '《', '〚', '〘', '〖', '〝', '（']
 
     # メインの処理
     def start_reading():
@@ -46,19 +52,24 @@ def main(page: ft.Page):
             # 次のトークンが存在する場合
             if i + 1 < len(tokens):
                 next_token = tokens[i + 1]
-                print("単語"+ token.surface)
-                print(token.part_of_speech)
-                # 助詞または助動詞であるかどうかをチェック
-                if token.part_of_speech.startswith('助詞') or token.part_of_speech.startswith('助動詞') or token.part_of_speech.startswith('記号,空白') or token.part_of_speech.startswith('記号,読点') or token.part_of_speech.startswith('記号,句点'):
-                        if not next_token.part_of_speech.startswith('助詞') and not next_token.part_of_speech.startswith('助動詞') and not next_token.part_of_speech.startswith('記号,読点') and not next_token.part_of_speech.startswith('記号,句点'):
-                            chunks.append(''.join(current_chunk))
-                            current_chunk = []
+                print(token.surface + " : " + token.part_of_speech)
+                # 記号であるかどうかをチェック
+                # 記号であるならば分節を終了する
+                # ただし、括弧のはじまりである場合は分節を終了しない
+                if (token.part_of_speech.startswith('記号') and (token.surface not in 括弧)) or next_token.surface in 括弧:
+                    chunks.append(''.join(current_chunk))
+                    current_chunk = []
+                else:
+                    # 助詞または助動詞であるかどうかをチェック
+                    if token.part_of_speech.startswith('助詞') or token.part_of_speech.startswith('助動詞'):
+                            if not next_token.part_of_speech.startswith('助詞') and not next_token.part_of_speech.startswith('助動詞') and not next_token.part_of_speech.startswith('記号') and not next_token.part_of_speech.startswith('記号,空白'):
+                                # 現在のトークンが助詞または助動詞で、次のトークンが助詞または助動詞でなく、次のトークンが空白出ない場合に実行される
+                                chunks.append(''.join(current_chunk))
+                                current_chunk = []
+
             else:
                 # 最後のトークンの場合
-                if token.part_of_speech.startswith('助詞') or token.part_of_speech.startswith('助動詞'):
-                    chunks.append(''.join(current_chunk))
-                else:
-                    chunks.append(''.join(current_chunk))
+                chunks.append(''.join(current_chunk))
 
         # スペースを削除
         chunks = [word for word in chunks if word != " "]  # スペースを削除
@@ -78,7 +89,7 @@ def main(page: ft.Page):
 
     # テキストを表示するボックス
     text_display = ft.Text(
-        value="hello",
+        value="",
         size=50,
         color="white",
         weight=ft.FontWeight.BOLD,
